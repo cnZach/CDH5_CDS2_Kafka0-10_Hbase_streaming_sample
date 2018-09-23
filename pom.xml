@@ -1,0 +1,146 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>org.hbase.myexample</groupId>
+  <version>1.0-SNAPSHOT</version>
+  <artifactId>sparkexample-hbase-api-1.x</artifactId>
+  <packaging>jar</packaging>
+  <name>Spark Example HBase 1.x API</name>
+  <properties>
+    <scala.version>2.11</scala.version>
+    <slf4j.version>1.7.5</slf4j.version>
+    <maven.compiler.source>1.8</maven.compiler.source>
+    <maven.compiler.target>1.8</maven.compiler.target>
+    <hbase.cloudera.version>1.2.0-cdh5.7.5</hbase.cloudera.version>
+    <hadoop.cloudera.version>2.6.0-cdh5.7.5</hadoop.cloudera.version>
+    <spark.cloudera.version>2.1.0.Cloudera2</spark.cloudera.version>
+    <kafka.version>0-8</kafka.version>
+  </properties>
+  <repositories>
+    <repository>
+      <id>apache-repo</id>
+      <name>Apache Repository</name>
+      <url>https://repository.apache.org/content/repositories/releases</url>
+    </repository>
+    <repository>
+      <id>cloudera</id>
+      <url>https://repository.cloudera.com/artifactory/cloudera-repos/</url>
+    </repository>
+  </repositories>
+  <dependencies>
+    <dependency> <!-- Scala -->
+      <groupId>org.scala-lang</groupId>
+      <artifactId>scala-library</artifactId>
+      <version>2.11.7</version>
+    </dependency>
+    <!--START OF TEST SCOPE-->
+    <!--hbase-hadoop-compat comes in transtively but we need the test-jar
+        to and this does not come in transitively.  Ditto for the
+        hbase-hadoopX-compat.
+     -->
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-hadoop-compat</artifactId>
+      <version>${hbase.cloudera.version}</version>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-hadoop2-compat</artifactId>
+      <version>${hbase.cloudera.version}</version>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <!-- make sure the version of hadoop-common pulled in by the above
+         matches our version used for the minicluster.
+      -->
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-common</artifactId>
+      <version>${hadoop.cloudera.version}</version>
+    </dependency>
+    <!--We need hadoop2 test jar or minidfs at a minimum.
+      It is not transitively included.
+      -->
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <!--In hadoop1 this is hadoop-test-->
+      <artifactId>hadoop-minicluster</artifactId>
+      <version>${hadoop.cloudera.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <!--This has the actual HBaseTestingUtility in it.
+      -->
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-testing-util</artifactId>
+      <version>${hbase.cloudera.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <!--We need this class for hbase servers at test time.
+      -->
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-server</artifactId>
+      <type>jar</type>
+      <version>${hbase.cloudera.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <!--END OF TEST SCOPE-->
+
+    <!-- General client dependencies, to be included in standalone jar -->
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-client</artifactId>
+      <version>${hbase.cloudera.version}</version>
+    </dependency>
+
+    <!-- Spark Streaming dependencies, should not be included in standalone jar -->
+    <dependency>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-streaming_${scala.version}</artifactId>
+      <version>${spark.cloudera.version}</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <dependency> <!-- Core Spark -->
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-core_${scala.version}</artifactId>
+      <version>${spark.cloudera.version}</version>
+    </dependency>
+
+    <dependency> <!-- Hadoop -->
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-client</artifactId>
+      <version>${hadoop.cloudera.version}</version>
+    </dependency>
+
+    <!-- Spark Streaming - Kafka -->
+    <dependency>
+      <groupId>org.apache.spark</groupId>
+      <!--<artifactId>spark-streaming-kafka-${scala.binary.version}</artifactId> -->
+      <artifactId>spark-streaming-kafka-${kafka.version}_${scala.version}</artifactId>
+      <version>${spark.cloudera.version}</version>
+    </dependency>
+
+  </dependencies>
+  <profiles>
+    <profile>
+      <id>build-1.y-against-hbase-2</id>
+      <properties>
+        <hbase.version>${hbase.cloudera.version}</hbase.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>client-standalone</id>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-assembly-plugin</artifactId>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+</project>
