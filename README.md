@@ -30,4 +30,4 @@ spark2-submit --class org.hbase.myexample.spark.JavaKafka08WordCountStoreInHBase
 
   Works on secure clusters for an indefinite period via keytab login. NOTE: copies the given keytab to the working directory of executors.
 
-  Usage: JavaKafka08WordCountStoreInHBase <broker-list> <topic>
+  Usage: JavaKafka08WordCountStoreInHBase broker-list topic
