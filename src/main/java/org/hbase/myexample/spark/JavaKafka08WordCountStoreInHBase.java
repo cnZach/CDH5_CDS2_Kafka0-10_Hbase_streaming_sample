@@ -151,6 +151,8 @@ public final class JavaKafka08WordCountStoreInHBase {
           LOG.error("Failed to connect to hbase. rethrowing; application should fail.", exception);
           throw exception;
         }
+      } else {
+        LOG.info("HBase connection exists: " + result.toString());
       }
       return result;
     }
@@ -252,7 +254,6 @@ public final class JavaKafka08WordCountStoreInHBase {
         rdd.foreachPartition(store);
       }
     });
-
 
     ssc.start();
     ssc.awaitTermination();

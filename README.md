@@ -11,5 +11,23 @@ export HBASE_JAR=/opt/cloudera/parcels/CDH/jars/hbase-annotations-1.2.0-cdh5.7.5
 
 2) run spark2-suibmit with 08:
 ```
-spark2-submit --class org.hbase.myexample.spark.JavaKafka08WordCountStoreInHBase --files my_log4j.conf --conf spark.yarn.appMasterEnv.JAVA_HOME=/usr/java/jdk1.8.0_60 --conf spark.executorEnv.JAVA_HOME=/usr/java/jdk1.8.0_60 --master yarn --deploy-mode cluster --principal "systest@HADOOP.EXAMPLE.COM" --keytab "systest.keytab" --conf spark.yarn.security.credentials.hbase.enabled=true  --conf spark.executor.extraClassPath=/etc/hbase/conf:${HBASE_JAR} --conf spark.executor.extraJavaOptions="-Dlog4j.configuration=my_log4j.conf"  --conf spark.driver.extraJavaOptions="-Dlog4j.configuration=my_log4j.conf" --conf spark.driver.extraClassPath=/etc/hbase/conf:${HBASE_JAR}  --conf spark.dynamicAllocation.enabled=false sparkexample-hbase-api-1.x-1.0-SNAPSHOT.jar 10.17.103.100:9092 test_log
+spark2-submit --class org.hbase.myexample.spark.JavaKafka08WordCountStoreInHBase \
+--files my_log4j.conf --conf spark.yarn.appMasterEnv.JAVA_HOME=/usr/java/jdk1.8.0_60 \
+--conf spark.executorEnv.JAVA_HOME=/usr/java/jdk1.8.0_60 \
+--master yarn --deploy-mode cluster --principal "systest@HADOOP.EXAMPLE.COM" --keytab "systest.keytab" \
+--conf spark.yarn.security.credentials.hbase.enabled=true  --conf spark.executor.extraClassPath=/etc/hbase/conf:${HBASE_JAR} \
+--conf spark.executor.extraJavaOptions="-Dlog4j.configuration=my_log4j.conf"  \
+--conf spark.driver.extraJavaOptions="-Dlog4j.configuration=my_log4j.conf" --conf spark.driver.extraClassPath=/etc/hbase/conf:${HBASE_JAR} \
+ --conf spark.dynamicAllocation.enabled=false sparkexample-hbase-api-1.x-1.0-SNAPSHOT.jar kafka-broker:9092 kafka-topic
 ```
+
+
+ the app Counts words in UTF8 encoded, '\n' delimited text received from the network every second. Then
+  stores the counts in HBase 'test_counts' table with a layout of:
+
+  RowID          |     CF          |   CQ     | value
+  time in millis  |  "word_counts"  |  <word>  |  <count for period>
+
+  Works on secure clusters for an indefinite period via keytab login. NOTE: copies the given keytab to the working directory of executors.
+
+  Usage: JavaKafka08WordCountStoreInHBase <broker-list> <topic>
