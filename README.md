@@ -34,7 +34,7 @@ spark2example-kafka010-hbase-api-1.x-1.0-SNAPSHOT.jar 10.17.101.127:9093 cdk140 
 
   Works on secure clusters for an indefinite period via keytab login. NOTE: copies the given keytab to the working directory of executors.
 
-  Usage: JavaKafka10WordCountStoreInHBase broker-list topic kafka_security_protocol groupId
+  Usage: JavaKafka10WordCountStoreInHBase broker-list topic kafka_security_protocol groupId remote-hbase-site.xml
 
 Sample jaas file:
 ```

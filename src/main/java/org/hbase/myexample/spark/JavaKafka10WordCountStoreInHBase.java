@@ -112,6 +112,7 @@ public final class JavaKafka10WordCountStoreInHBase {
 
           if (hbase_file.equals("_EMPTY_")) {
             final File clientConfigs = new File("/etc/hbase/conf");
+	    LOG.info("=== Adding default hbase conf from /etc/hbase/conf.");
             for (File siteConfig : clientConfigs.listFiles()) {
               if (siteConfig.getName().endsWith(".xml")) {
                 LOG.debug("Adding config resource: {}", siteConfig);
@@ -210,8 +211,8 @@ public final class JavaKafka10WordCountStoreInHBase {
     String protocol = args[2];
     String group = args[3];
     String custom_hbase_site_file="_EMPTY_";
-    if (args.length == 4) {
-      custom_hbase_site_file= args[4];
+    if (args.length == 5) {
+      custom_hbase_site_file = args[4];
       LOG.info("== Using custom hbase conf: {}", custom_hbase_site_file);
     }
     Set<String> topicsSet = new HashSet<>(Arrays.asList(topics.split(",")));
