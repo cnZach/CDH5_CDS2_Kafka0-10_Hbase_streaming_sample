@@ -3,6 +3,8 @@ package org.hbase.myexample.spark;
 
 import scala.Tuple2;
 import com.google.common.collect.Lists;
+import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -21,22 +23,21 @@ import org.apache.spark.api.java.function.FlatMapFunction;
 import org.apache.spark.api.java.function.Function2;
 import org.apache.spark.api.java.function.PairFunction;
 import org.apache.spark.api.java.function.VoidFunction;
+import org.apache.spark.api.java.function.VoidFunction2;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.StorageLevels;
 import org.apache.spark.deploy.SparkHadoopUtil;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.common.serialization.StringDeserializer;
+
+import org.apache.spark.SparkConf;
+import org.apache.spark.streaming.api.java.*;
+import org.apache.spark.streaming.kafka010.ConsumerStrategies;
+import org.apache.spark.streaming.kafka010.KafkaUtils;
+import org.apache.spark.streaming.kafka010.LocationStrategies;
 import org.apache.spark.streaming.Durations;
 import org.apache.spark.streaming.Time;
-import org.apache.spark.streaming.api.java.JavaDStream;
-import org.apache.spark.streaming.api.java.JavaPairDStream;
-import org.apache.spark.streaming.api.java.JavaPairInputDStream;
-import org.apache.spark.streaming.api.java.JavaReceiverInputDStream;
-import org.apache.spark.streaming.api.java.JavaStreamingContext;
-import org.apache.spark.streaming.kafka.KafkaUtils;
-import org.apache.spark.streaming.Seconds;
-import org.apache.spark.streaming.kafka.*;
-import org.apache.spark.api.java.function.*;
-import org.apache.spark.streaming.api.java.*;
-import kafka.serializer.StringDecoder;
 
 
 import org.slf4j.Logger;
@@ -62,11 +63,11 @@ import java.util.Iterator;
  * Works on secure clusters for an indefinite period via keytab login. NOTE: copies the given
  * keytab to the working directory of executors.
  *
- * Usage: JavaKafka08WordCountStoreInHBase <broker-list> <topic>
+ * Usage: JavaKafka10WordCountStoreInHBase <broker-list> <topic> <kafka security protocol>
  */
-public final class JavaKafka08WordCountStoreInHBase {
+public final class JavaKafka10WordCountStoreInHBase {
 
-  private static final Logger LOG = LoggerFactory.getLogger(JavaKafka08WordCountStoreInHBase.class);
+  private static final Logger LOG = LoggerFactory.getLogger(JavaKafka10WordCountStoreInHBase.class);
 
   /**
    * Write each word:count pair into hbase, in a row for the given time period.
@@ -186,63 +187,40 @@ public final class JavaKafka08WordCountStoreInHBase {
 
   public static void main(String[] args) throws Exception{
     if (args.length < 2) {
-      System.err.println("Usage: JavaKafka08WordCountStoreInHBase <broker-list> <topic>");
+      System.err.println("Usage: JavaKafka10WordCountStoreInHBase <broker-list> <topic> <protocol> <groupId>");
       System.exit(1);
     }
 
     // Create the context with a 1 second batch size
-    SparkConf sparkConf = new SparkConf().setAppName("JavaKafka08WordCountStoreInHBase");
+    SparkConf sparkConf = new SparkConf().setAppName("JavaKafka10WordCountStoreInHBase");
     JavaStreamingContext ssc = new JavaStreamingContext(sparkConf, Durations.seconds(2));
 
     String brokers = args[0];
     String topics = args[1];
-    HashSet<String> topicsSet = new HashSet<String>(Arrays.asList(topics.split(",")));
-    HashMap<String, String> kafkaParams = new HashMap<String, String>();
-    kafkaParams.put("metadata.broker.list", brokers);
+    String protocol = args[2];
+    String group = args[3];
+    Set<String> topicsSet = new HashSet<>(Arrays.asList(topics.split(",")));
+    Map<String, Object> kafkaParams = new HashMap<>();
+    kafkaParams.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, brokers);
+    kafkaParams.put("security.protocol", protocol);
+    kafkaParams.put("sasl.kerberos.service.name", "kafka");
+    kafkaParams.put(ConsumerConfig.GROUP_ID_CONFIG, group);
+    kafkaParams.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+    kafkaParams.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
 
     // Copy the keytab to our executors
     ssc.sparkContext().addFile(sparkConf.get("spark.yarn.keytab"));
 
     // Create direct kafka stream with brokers and topics
-    JavaPairInputDStream<String, String> messages = KafkaUtils.createDirectStream(
+    JavaInputDStream<ConsumerRecord<String, String>> messages = KafkaUtils.createDirectStream(
             ssc,
-            String.class,
-            String.class,
-            StringDecoder.class,
-            StringDecoder.class,
-            kafkaParams,
-            topicsSet
-    );
+            LocationStrategies.PreferConsistent(),
+            ConsumerStrategies.Subscribe(topicsSet, kafkaParams));
 
-    JavaDStream<String> lines = messages.map(new Function<Tuple2<String, String>, String>() {
-      @Override
-      public String call(Tuple2<String, String> tuple2) {
-        return tuple2._2();
-      }
-    });
-
-
-    JavaDStream<String> words = lines.flatMap(new FlatMapFunction<String, String>() {
-      @Override
-      public Iterator<String> call(String x) {
-        return Arrays.asList(SPACE.split(x)).iterator();
-      }
-    });
-
-    JavaPairDStream<String, Integer> wordCounts = words.mapToPair(
-            new PairFunction<String, String, Integer>() {
-              @Override
-              public Tuple2<String, Integer> call(String s) {
-                return new Tuple2<>(s, 1);
-              }
-            }).reduceByKey(
-            new Function2<Integer, Integer, Integer>() {
-              @Override
-              public Integer call(Integer i1, Integer i2) {
-                return i1 + i2;
-              }
-            });
-
+    JavaDStream<String> lines = messages.map(ConsumerRecord::value);
+    JavaDStream<String> words = lines.flatMap(x -> Arrays.asList(SPACE.split(x)).iterator());
+    JavaPairDStream<String, Integer> wordCounts = words.mapToPair(s -> new Tuple2<>(s, 1))
+            .reduceByKey((i1, i2) -> i1 + i2);
     final StoreCountsToHBase store = new StoreCountsToHBase(sparkConf);
 
     wordCounts.print();

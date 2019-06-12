@@ -3,18 +3,18 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.hbase.myexample</groupId>
   <version>1.0-SNAPSHOT</version>
-  <artifactId>sparkexample-hbase-api-1.x</artifactId>
+  <artifactId>spark2example-kafka010-hbase-api-1.x</artifactId>
   <packaging>jar</packaging>
-  <name>Spark Example HBase 1.x API</name>
+  <name>Spark2 Kafka0-10 HBase 1.x API</name>
   <properties>
     <scala.version>2.11</scala.version>
     <slf4j.version>1.7.5</slf4j.version>
     <maven.compiler.source>1.8</maven.compiler.source>
     <maven.compiler.target>1.8</maven.compiler.target>
-    <hbase.cloudera.version>1.2.0-cdh5.7.5</hbase.cloudera.version>
-    <hadoop.cloudera.version>2.6.0-cdh5.7.5</hadoop.cloudera.version>
-    <spark.cloudera.version>2.1.0.Cloudera2</spark.cloudera.version>
-    <kafka.version>0-8</kafka.version>
+    <hbase.cloudera.version>1.2.0-cdh5.14.4</hbase.cloudera.version>
+    <hadoop.cloudera.version>2.6.0-cdh5.14.4</hadoop.cloudera.version>
+    <spark.cloudera.version>2.4.0.Cloudera2</spark.cloudera.version>
+    <kafka.version>0-10</kafka.version>
   </properties>
   <repositories>
     <repository>

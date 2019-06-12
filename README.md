@@ -11,7 +11,7 @@ export HBASE_JAR=/opt/cloudera/parcels/CDH/jars/hbase-annotations-1.2.0-cdh5.7.5
 
 2) run spark2-suibmit with 08:
 ```
-spark2-submit --class org.hbase.myexample.spark.JavaKafka08WordCountStoreInHBase \
+spark2-submit --class org.hbase.myexample.spark.JavaKafka10WordCountStoreInHBase \
 --files my_log4j.conf --conf spark.yarn.appMasterEnv.JAVA_HOME=/usr/java/jdk1.8.0_60 \
 --conf spark.executorEnv.JAVA_HOME=/usr/java/jdk1.8.0_60 \
 --master yarn --deploy-mode cluster --principal "systest@HADOOP.EXAMPLE.COM" --keytab "systest.keytab" \
