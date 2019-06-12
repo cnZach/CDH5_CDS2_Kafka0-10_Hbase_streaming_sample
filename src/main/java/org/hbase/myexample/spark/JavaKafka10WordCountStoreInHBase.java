@@ -2,6 +2,7 @@ package org.hbase.myexample.spark;
 
 
 import scala.Tuple2;
+import scala.Tuple3;
 import com.google.common.collect.Lists;
 import java.util.Map;
 import java.util.Set;
@@ -82,10 +83,10 @@ public final class JavaKafka10WordCountStoreInHBase {
 
     private byte[] ROW_ID;
     /** (principal, keytab) */
-    private final Tuple2<String, String> auth;
+    private final Tuple3<String, String, String> auth;
 
-    public StoreCountsToHBase(final SparkConf sparkConf) {
-      auth = new Tuple2<String,String>(sparkConf.get("spark.yarn.principal"), sparkConf.get("spark.yarn.keytab"));
+    public StoreCountsToHBase(final SparkConf sparkConf, String custom_hbase_site_file) {
+      auth = new Tuple3<String,String,String>(sparkConf.get("spark.yarn.principal"), sparkConf.get("spark.yarn.keytab"),custom_hbase_site_file);
     }
 
     public void setTime(Time time) {
@@ -96,8 +97,10 @@ public final class JavaKafka10WordCountStoreInHBase {
      * Rely on a map of (principal,keytab) => connection to ensure we only keep around one per
      * Classloader.
      */
-    private static Tuple2<UserGroupInformation, Connection> ensureConnection(final Tuple2<String, String> auth)
+    private static Tuple2<UserGroupInformation, Connection> ensureConnection(final Tuple3<String, String, String> auth3)
             throws IOException, InterruptedException {
+      Tuple2<String, String> auth = new Tuple2<>(auth3._1(), auth3._2());
+      String hbase_file = auth3._3();
       Tuple2<UserGroupInformation, Connection> result = connections.get(auth);
       if (result == null) {
         LOG.info("Setting up HBase connection.");
@@ -106,12 +109,19 @@ public final class JavaKafka10WordCountStoreInHBase {
           final Configuration conf = HBaseConfiguration.create(util.newConfiguration(new SparkConf()));
           // This work-around for getting hbase client configs requires that you deploy an HBase GATEWAY
           // role on each node that can run a spark executor.
-          final File clientConfigs = new File("/etc/hbase/conf");
-          for (File siteConfig : clientConfigs.listFiles()) {
-            if (siteConfig.getName().endsWith(".xml")) {
-              LOG.debug("Adding config resource: {}", siteConfig);
-              conf.addResource(siteConfig.toURI().toURL());
+
+          if (hbase_file.equals("_EMPTY_")) {
+            final File clientConfigs = new File("/etc/hbase/conf");
+            for (File siteConfig : clientConfigs.listFiles()) {
+              if (siteConfig.getName().endsWith(".xml")) {
+                LOG.debug("Adding config resource: {}", siteConfig);
+                conf.addResource(siteConfig.toURI().toURL());
+              }
             }
+          } else {
+            final File clientConfigs = new File(hbase_file);
+            LOG.info("=== Adding custom hbase resource: {}", clientConfigs);
+            conf.addResource(clientConfigs.toURI().toURL());
           }
           UserGroupInformation ugi = null;
           Connection connection = null;
@@ -186,8 +196,8 @@ public final class JavaKafka10WordCountStoreInHBase {
   private static final Pattern SPACE = Pattern.compile(" ");
 
   public static void main(String[] args) throws Exception{
-    if (args.length < 2) {
-      System.err.println("Usage: JavaKafka10WordCountStoreInHBase <broker-list> <topic> <protocol> <groupId>");
+    if (args.length < 4) {
+      System.err.println("Usage: JavaKafka10WordCountStoreInHBase <broker-list> <topic> <protocol> <groupId> custom-hbase-site-file-name");
       System.exit(1);
     }
 
@@ -199,6 +209,11 @@ public final class JavaKafka10WordCountStoreInHBase {
     String topics = args[1];
     String protocol = args[2];
     String group = args[3];
+    String custom_hbase_site_file="_EMPTY_";
+    if (args.length == 4) {
+      custom_hbase_site_file= args[4];
+      LOG.info("== Using custom hbase conf: {}", custom_hbase_site_file);
+    }
     Set<String> topicsSet = new HashSet<>(Arrays.asList(topics.split(",")));
     Map<String, Object> kafkaParams = new HashMap<>();
     kafkaParams.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, brokers);
@@ -221,7 +236,7 @@ public final class JavaKafka10WordCountStoreInHBase {
     JavaDStream<String> words = lines.flatMap(x -> Arrays.asList(SPACE.split(x)).iterator());
     JavaPairDStream<String, Integer> wordCounts = words.mapToPair(s -> new Tuple2<>(s, 1))
             .reduceByKey((i1, i2) -> i1 + i2);
-    final StoreCountsToHBase store = new StoreCountsToHBase(sparkConf);
+    final StoreCountsToHBase store = new StoreCountsToHBase(sparkConf, custom_hbase_site_file);
 
     wordCounts.print();
 
