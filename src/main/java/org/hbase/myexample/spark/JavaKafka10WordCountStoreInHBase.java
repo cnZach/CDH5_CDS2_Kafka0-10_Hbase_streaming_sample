@@ -64,7 +64,7 @@ import java.util.Iterator;
  * Works on secure clusters for an indefinite period via keytab login. NOTE: copies the given
  * keytab to the working directory of executors.
  *
- * Usage: JavaKafka10WordCountStoreInHBase <broker-list> <topic> <kafka security protocol>
+ * Usage: JavaKafka10WordCountStoreInHBase <broker-list> <topic> <kafka security protocol> <consumer groupId> <custom-hbase_site xml, optional>
  */
 public final class JavaKafka10WordCountStoreInHBase {
 
@@ -199,6 +199,7 @@ public final class JavaKafka10WordCountStoreInHBase {
   public static void main(String[] args) throws Exception{
     if (args.length < 4) {
       System.err.println("Usage: JavaKafka10WordCountStoreInHBase <broker-list> <topic> <protocol> <groupId> custom-hbase-site-file-name");
+      System.err.println("Usage: custom-hbase-site-file-name is optional, but if specified, you need to provide the file with --files option.");
       System.exit(1);
     }
 
