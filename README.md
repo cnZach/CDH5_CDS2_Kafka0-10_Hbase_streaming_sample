@@ -2,7 +2,7 @@
 
 This is an example streaming from secured kafka, then use standard hbase java client and hadoop UGI within CDH spark2. The UGI login code is referred to Stack's original work: [github](https://github.com/saintstack/hbase-downstreamer/blob/master/hbase-1/src/main/java/org/hbase/downstreamer/spark/JavaNetworkWordCountStoreInHBase.java#L130)
 
-This sample project builds with spark2.4 Cloudera2 and CDH 5.14.4, but it should aslo work with other CDS2.x versions as well.
+This sample project builds with spark2.4 Cloudera2 and CDH 5.14.4, but it should aslo work with other CDS2.x versions as well, see [1].
 
 # How to run it:
 
@@ -75,6 +75,47 @@ Usage: JavaKafka10WordCountStoreInHBase broker-list topic kafka_security_protoco
   1 row(s) in 0.1300 seconds
   ```
 
-  This app works on secured clusters for an indefinite period via keytab login. NOTE: copies the given keytab to the working directory of executors.
+This app works on secured clusters for an indefinite period via keytab login. NOTE: copies the given keytab to the working directory of executors.
 
+#[1] 
+Here's an example for old version's CDS and CDH, in Cloudera Distributed Spark 2.1.0 Cloudera2 and CDH 5.11.0 cluster, the steps and spark2 submit command are:
+
+<1> add the following to Spark 2 Client Advanced Configuration Snippet (Safety Valve) for spark2-conf/spark-env.sh on CM:
+```
+export SPARK_DIST_CLASSPATH="$SPARK_DIST_CLASSPATH:$(ls /opt/cloudera/parcels/CDH/jars/*hbase*.jar |tr  ' '  ':'  | paste -sd:)"
+export SPARK_DIST_CLASSPATH="$SPARK_DIST_CLASSPATH:$(ls /opt/cloudera/parcels/CDH/jars/*htrace*.jar |tr  ' '  ':'  | paste -sd:)"
+echo "====== SPARK_DIST_CLASSPATH is: " $SPARK_DIST_CLASSPATH 
+```
+
+<2> prepare the jaas.conf file for hbase and kafka, the jaas file should contain two sections, like below:
+```
+cat kafka_jaas.conf
+KafkaClient{
+com.sun.security.auth.module.Krb5LoginModule required
+useKeyTab=true
+keyTab="./kafka_systest.keytab"
+principal="systest@ZYX.COM";
+
+};
+Client{
+com.sun.security.auth.module.Krb5LoginModule required
+useKeyTab=true
+keyTab="./kafka_systest.keytab"
+principal="systest@ZYX.COM";
+};
+```
+
+<3> run the spark2 submit command with built jar with CDS 2.1R2 and CDH 5.11.0 hbase client:spark2example-kafka010-hbase-api-1.x-1.0-SNAPSHOT.jar
+
+```
+export JAVA_HOME=/usr/java/jdk1.8.0_144
+SPARK_KAFKA_VERSION=0.10 spark2-submit --master yarn --deploy-mode cluster  \
+--conf spark.yarn.appMasterEnv.JAVA_HOME=/usr/java/jdk1.8.0_144  \
+--conf spark.executorEnv.JAVA_HOME=/usr/java/jdk1.8.0_144 \
+--class org.hbase.myexample.spark.JavaKafka10WordCountStoreInHBase \
+--files kafka_systest.keytab,kafka_jaas.conf --keytab systest.keytab --principal systest@ZYX.COM \
+--conf spark.executor.extraJavaOptions="-Djava.security.auth.login.config=./kafka_jaas.conf" \
+--conf spark.driver.extraJavaOptions="-Djava.security.auth.login.config=./kafka_jaas.conf" \
+spark2example-kafka010-hbase-api-1.x-1.0-SNAPSHOT.jar kafka-1.zyx.com:9093 k_topic SASL_PLAINTEXT test-kafka-group-1
+```
 

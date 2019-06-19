@@ -11,9 +11,10 @@
     <slf4j.version>1.7.5</slf4j.version>
     <maven.compiler.source>1.8</maven.compiler.source>
     <maven.compiler.target>1.8</maven.compiler.target>
-    <hbase.cloudera.version>1.2.0-cdh5.14.4</hbase.cloudera.version>
-    <hadoop.cloudera.version>2.6.0-cdh5.14.4</hadoop.cloudera.version>
-    <spark.cloudera.version>2.4.0.Cloudera2</spark.cloudera.version>
+    <hbase.cloudera.version>1.2.0-cdh5.11.0</hbase.cloudera.version>
+    <hadoop.cloudera.version>2.6.0-cdh5.11.0</hadoop.cloudera.version>
+    <spark.cloudera.version>2.1.0.Cloudera2</spark.cloudera.version>
+    <kafka.cloudera.version>0.10.0-kafka-2.1.0</kafka.cloudera.version>
     <kafka.version>0-10</kafka.version>
   </properties>
   <repositories>
@@ -38,6 +39,33 @@
         to and this does not come in transitively.  Ditto for the
         hbase-hadoopX-compat.
      -->
+    <dependency>
+      <groupId>org.apache.kafka</groupId>
+      <artifactId>kafka_${scala.version}</artifactId>
+      <version>${kafka.cloudera.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>com.sun.jmx</groupId>
+          <artifactId>jmxri</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.sun.jdmk</groupId>
+          <artifactId>jmxtools</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>net.sf.jopt-simple</groupId>
+          <artifactId>jopt-simple</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.slf4j</groupId>
+          <artifactId>slf4j-simple</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.zookeeper</groupId>
+          <artifactId>zookeeper</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-hadoop-compat</artifactId>
@@ -119,7 +147,7 @@
     <!-- Spark Streaming - Kafka -->
     <dependency>
       <groupId>org.apache.spark</groupId>
-      <!--<artifactId>spark-streaming-kafka-${scala.binary.version}</artifactId> -->
+      <!--<artifactId>spark-streaming-kafka-${scala.version}</artifactId> -->
       <artifactId>spark-streaming-kafka-${kafka.version}_${scala.version}</artifactId>
       <version>${spark.cloudera.version}</version>
     </dependency>
